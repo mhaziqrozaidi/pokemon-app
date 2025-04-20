@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/pokemon_provider.dart';
 import '../widgets/pokemon_card.dart';
+import '../widgets/filter_dialog.dart';
 import 'pokemon_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -42,6 +43,13 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  void _openFilterDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => const FilterDialog(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -49,10 +57,22 @@ class _HomeScreenState extends State<HomeScreen> {
         title: const Text('Pokedex'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: _openFilterDialog,
+            tooltip: 'Filter',
+          ),
+        ],
       ),
       body: Column(
         children: [
           _buildSearchBar(),
+          Consumer<PokemonProvider>(
+            builder: (context, provider, child) {
+              return _buildActiveFiltersBar(provider);
+            },
+          ),
           Expanded(
             child: Consumer<PokemonProvider>(
               builder: (context, provider, child) {
@@ -60,7 +80,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (provider.pokemonList.isEmpty && provider.searchQuery.isNotEmpty) {
+                if (provider.pokemonList.isEmpty && 
+                   (provider.searchQuery.isNotEmpty || provider.filtersActive)) {
                   return Center(
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -72,7 +93,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                         const SizedBox(height: 16),
                         Text(
-                          'No Pokémon found for "${provider.searchQuery}"',
+                          'No Pokémon found with current filters',
                           style: TextStyle(
                             fontSize: 16,
                             color: Colors.grey.shade600,
@@ -175,5 +196,101 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
     );
+  }
+
+  Widget _buildActiveFiltersBar(PokemonProvider provider) {
+    if (!provider.filtersActive) {
+      return const SizedBox.shrink();
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: Colors.grey.shade100,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(
+                'Active Filters',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey.shade700,
+                ),
+              ),
+              const Spacer(),
+              TextButton(
+                onPressed: () {
+                  provider.clearFilters();
+                },
+                child: const Text('Clear All'),
+              ),
+            ],
+          ),
+          if (provider.selectedTypes.isNotEmpty)
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: provider.selectedTypes.map((type) {
+                return Chip(
+                  label: Text(
+                    type[0].toUpperCase() + type.substring(1),
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  ),
+                  backgroundColor: _getTypeColor(type),
+                  deleteIconColor: Colors.white,
+                  onDeleted: () {
+                    provider.toggleTypeFilter(type);
+                  },
+                );
+              }).toList(),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Color _getTypeColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'normal':
+        return Colors.grey.shade500;
+      case 'fire':
+        return Colors.red;
+      case 'water':
+        return Colors.blue;
+      case 'grass':
+        return Colors.green;
+      case 'electric':
+        return Colors.yellow.shade700;
+      case 'ice':
+        return Colors.cyan;
+      case 'fighting':
+        return Colors.orange.shade800;
+      case 'poison':
+        return Colors.purple;
+      case 'ground':
+        return Colors.brown;
+      case 'flying':
+        return Colors.indigo.shade200;
+      case 'psychic':
+        return Colors.pink;
+      case 'bug':
+        return Colors.lightGreen;
+      case 'rock':
+        return Colors.brown.shade300;
+      case 'ghost':
+        return Colors.indigo;
+      case 'dragon':
+        return Colors.indigo.shade700;
+      case 'dark':
+        return Colors.grey.shade800;
+      case 'steel':
+        return Colors.blueGrey;
+      case 'fairy':
+        return Colors.pink.shade200;
+      default:
+        return Colors.grey;
+    }
   }
 }
